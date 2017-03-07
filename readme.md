@@ -1,38 +1,50 @@
-redux-retype-actions
+redux-overlord
 =====================
 
-Rename action types
+Give an overlord reducer access to the entire combineReducer state
 
-[![Build Status](https://travis-ci.org/l2silver/redux-retype-actions.svg?branch=master)](https://travis-ci.org/l2silver/redux-retype-actions)
+[![Build Status](https://travis-ci.org/l2silver/redux-overlord.svg?branch=master)](https://travis-ci.org/l2silver/redux-overlord)
 
 
 ## Why
-If you use redux-batched-actions with any kind of redux dev tools, the batched actions show up simply as BATCH_ACTION, which doesn't tell you a whole lot about the action. Now you can easily rename a batch action to something more useful. Although this tool works with any kind of action, I can't think of any other use cases outside of batched-actions
+Although sharing the state of reducers is generally considered an anti pattern, there are cases where it's neeccessary. For myself, I wanted the ability to batch complex actions together, and one of those actions was a generic reordering action. I separate my relationship reducers from their respective entities to take advantage of handling a single action with multiple reducers, but the problem with the reordering action is that it relies information in the entities themselves. Now under normal circumstances, I would get the state, get all the information I need, and then send the reorder action with the correct order already calculated, but since I'm batching actions, and my reorder action depends on the preceding actions, I need the ability to calculate and change the reordered relationship inside an overlord reducer.
 
-```js
-npm install --save redux-retype-actions
+```
+npm install --save redux-overlord
 ```
 
 ## Usage
 
-```js
-import {createStore} from 'redux';
-import {batchActions, enableBatching} from 'redux-batched-actions';
-import {retypeAction, enableRetyping} from 'redux-retype-actions';
-import {createAction} from 'redux-actions';
+```
+import {createStore, combineReducers} from 'redux';
+import shadowReducer from 'redux-overlord';
 
-const doThing = createAction('DO_THING')
-const doOther = createAction('DO_OTHER')
-
-function reducer(state, action) {
-  switch (action.type) {
-    case 'DO_THING': return 'thing'
-    case 'DO_OTHER': return 'other'
-    default: return state
-  }
+function one(state, action){
+	switch(action.type){
+		default:
+			return 1
+	}
 }
 
-const store = createStore(enableRetyping(enableBatching(reducer)), initialState)
-const doMultipleThings = retypeAction('DO_MULTIPLE_THINGS', batchActions([doThing(), doOther()]))
-store.dispatch(doMultipleThings)
+function two(state, action){
+	switch(action.type){
+		default:
+			return 2
+	}
+}
+
+const overlordReducer = function(state, action){
+	switch(action.type)
+		default:
+			return {one: state.one, two: state.two + 1}
+}
+
+const shadowedReducer = shadowReducer(
+	combineReducers({one, two}),
+	overlordReducer
+)
+
+
+
+const store = createStore(shadowedReducer, initialState)
 ```
