@@ -1,8 +1,23 @@
 // @flow
-import {enableRetyping, retypeAction} from './'
-
-describe('redux-retype-actions', function () {
-  it('enables action retyping', function () {
+import composeHocs from './'
+describe('redux-compose-hocs', function () {
+  it('enables composing', function () {
+      function hocOne(reducer){
+        return function hocOneReducer(state, action){
+          if(action.type === 'hocOne'){
+            return hocOneReducer(state, action.action)
+          }
+          return reducer(state, action)
+        }
+      }
+      function hocTwo(reducer){
+        return function hocTwoReducer(state, action){
+          if(action.type === 'hocTwo'){
+            return hocTwoReducer(state, action.action)
+          }
+          return reducer(state, action)
+        }
+      }
       const reducer = function (state, action){
         switch(action.type){
           case '1':
@@ -11,18 +26,34 @@ describe('redux-retype-actions', function () {
             return 0
         }
       }
-      const enabledReducer = enableRetyping(reducer)
+      const composedReducer = composeHocs(reducer, hocOne, hocTwo)
+      
+      const hocOneActionType = 'hocOne'
+      const hocTwoActionType = 'hocTwo'
       const trueAction = {
-        type: '1',
+        type: '1'
       }
       const falseAction = {
         type: '0'
       }
-      const renameTrueAction = retypeAction('TRUE', trueAction)
-      const renameFalseAction = retypeAction('FALSE', falseAction)
-      expect(enabledReducer({}, renameTrueAction)).toBe(1)
-      expect(enabledReducer({}, renameFalseAction)).toBe(0)
-      expect(renameTrueAction.type).toBe('TRUE')
-      expect(renameFalseAction.type).toBe('FALSE')
+      function generateNestedAction(action){
+        return {
+          type: hocOneActionType,
+          action: {
+            type: hocTwoActionType,
+            action: {
+              type: hocOneActionType,
+              action
+            }
+          }
+        }
+      }
+
+      
+      
+      const nestedTrueAction = generateNestedAction(trueAction)
+      const nestedFalseAction = generateNestedAction(falseAction)
+      expect(composedReducer({}, nestedTrueAction)).toBe(1)
+      expect(composedReducer({}, nestedFalseAction)).toBe(0)
   })
 })
